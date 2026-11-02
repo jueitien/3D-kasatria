@@ -1,0 +1,492 @@
+<!doctype html>
+<html>
+  <head>
+    <title>three.js css3d - periodic table</title>
+    <meta charset="utf-8" />
+    <meta
+      name="viewport"
+      content="width=device-width, user-scalable=no, minimum-scale=1.0, maximum-scale=1.0"
+    />
+    <meta property="og:title" content="three.js css3d - periodic table" />
+    <meta property="og:type" content="website" />
+    <meta
+      property="og:url"
+      content="https://threejs.org/examples/css3d_periodictable.html"
+    />
+    <meta
+      property="og:image"
+      content="https://threejs.org/examples/screenshots/css3d_periodictable.jpg"
+    />
+    <link rel="stylesheet" href="https://threejs.org/examples/main.css" />
+    <script src="https://accounts.google.com/gsi/client" async defer></script>
+    <style>
+      a {
+        color: #8ff;
+      }
+
+      #menu {
+        position: absolute;
+        bottom: 20px;
+        width: 100%;
+        text-align: center;
+      }
+
+      .element {
+        width: 120px;
+        height: 160px;
+        box-shadow: 0px 0px 12px rgba(0, 255, 255, 0.5);
+        border: 1px solid rgba(127, 255, 255, 0.25);
+        font-family: Helvetica, sans-serif;
+        text-align: center;
+        line-height: normal;
+        cursor: default;
+      }
+
+      .element:hover {
+        box-shadow: 0px 0px 12px rgba(0, 255, 255, 0.75);
+        border: 1px solid rgba(127, 255, 255, 0.75);
+      }
+
+      .element .header_container {
+        display: flex;
+        justify-content: space-between;
+        color: rgba(127, 255, 255, 0.75);
+        width: 70%;
+        margin: 10px auto 0;
+      }
+
+
+      .element .header_container .country,.element .header_container .age {
+        font-size: 10px;
+        color: rgba(255, 255, 255, 0.75);
+      }
+
+     .element .image{
+        margin: 5px auto 0 auto; 
+        height: 90px;
+        width: 70%;
+      }
+
+      .element .details {
+        position: absolute;
+        bottom: 15px;
+        left: 0px;
+        right: 0px;
+        font-size: 10px;
+        color: rgba(255, 255, 255, 0.75);
+      }
+
+      button {
+        color: rgba(127, 255, 255, 0.75);
+        background: transparent;
+        outline: 1px solid rgba(127, 255, 255, 0.75);
+        border: 0px;
+        padding: 5px 10px;
+        cursor: pointer;
+      }
+
+      button:hover {
+        background-color: rgba(0, 255, 255, 0.5);
+      }
+
+      button:active {
+        color: #000000;
+        background-color: rgba(0, 255, 255, 0.75);
+      }
+
+      /* Google Login Overlay (Image A) */
+      #login-overlay {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100vw;
+        height: 100vh;
+        background: radial-gradient(circle at center, rgba(15, 32, 39, 0.98), rgba(0, 0, 0, 0.99));
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        z-index: 99999;
+        font-family: Helvetica, Arial, sans-serif;
+      }
+
+      .login-card {
+        background: rgba(255, 255, 255, 0.85);
+        border: 1px solid rgba(0, 255, 255, 0.4);
+        box-shadow: 0 0 35px rgba(0, 255, 255, 0.25);
+        padding: 45px 35px;
+        border-radius: 14px;
+        text-align: center;
+        color: #ffffff;
+        max-width: 360px;
+        width: 90%;
+      }
+
+      .login-card h2 {
+        margin: 0 0 10px 0;
+        color: rgba(0, 0, 0, 0.95);
+        letter-spacing: 1px;
+      }
+
+      .login-card p {
+        color: #000000;
+        font-size: 14px;
+        margin-bottom: 30px;
+        line-height: 1.5;
+      }
+
+      #google-btn {
+        display: flex;
+        justify-content: center;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="login-overlay">
+      <div class="login-card">
+        <h2>Welcome Back</h2>
+        <p>Please sign in with your Google account to view the Periodic Table visualization.</p>
+        <div id="google-btn"></div>
+      </div>
+    </div>
+
+    <div id="info">
+      <a href="https://threejs.org" target="_blank" rel="noopener">three.js</a>
+      css3d - periodic table.
+    </div>
+    <div id="container"></div>
+    <div id="menu">
+      <button id="table">TABLE</button>
+      <button id="sphere">SPHERE</button>
+      <button id="helix">HELIX</button>
+      <button id="grid">GRID</button>
+    </div>
+
+    <script type="importmap">
+    {
+      "imports": {
+        "three": "https://unpkg.com/three@0.160.0/build/three.module.js",
+        "three/addons/": "https://unpkg.com/three@0.160.0/examples/jsm/"
+      }
+    }
+    </script>
+
+   
+
+    <script type="module">
+      import * as THREE from "three";
+
+      import TWEEN from "three/addons/libs/tween.module.js";
+      import { TrackballControls } from "three/addons/controls/TrackballControls.js";
+      import {
+        CSS3DRenderer,
+        CSS3DObject,
+      } from "three/addons/renderers/CSS3DRenderer.js";
+
+
+       async function loadData() {
+        const URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vQy_9SJjWfgUL7qK0ePQVD4AaTE5MEhkobvgqgbfZt6SLdTXAW6-Q_TiTbrarhuodfleSmfdhqwoMA2/pub?output=csv"
+        const text = await (await fetch(URL)).text();
+        const [header, ...lines] = text.trim().split(/\r?\n/);
+        const test = lines.map(line => {
+          const str = line.split(',');
+          str.splice(5, 2, str.slice(5, 7).join(','));
+          str[5] = str[5].replace(/"/g, "").trim();
+          const Float = parseFloat(str[5].replace(/[^0-9.]/g, ''));  
+
+          return {str , Float};
+        });
+        return test;
+      }
+
+      function ColorIdentifier(Net, element) {
+        if (Net < 100000) {
+              element.style.backgroundColor = "rgba(239, 48, 34, 0.6)";
+              element.style.borderColor = "rgba(239, 48, 34, 0.8)";
+            } else if (Net <= 200000) {
+              element.style.backgroundColor = "rgba(253, 202, 53, 0.6)";
+              element.style.borderColor = "rgba(253, 202, 53, 0.8)";
+            } else {
+              element.style.backgroundColor = "rgba(58, 159, 72, 0.6)";
+              element.style.borderColor = "rgba(58, 159, 72, 0.8)";
+            }
+      }
+
+
+      const table = await loadData();
+      console.log(table);
+  
+
+      let camera, scene, renderer;
+      let controls;
+
+      const objects = [];
+      const targets = { table: [], sphere: [], helix: [], grid: [] };
+
+      init();
+      animate();
+
+      function init() {
+        camera = new THREE.PerspectiveCamera(
+          40,
+          window.innerWidth / window.innerHeight,
+          1,
+          10000,
+        );
+        camera.position.z = 3000;
+
+        scene = new THREE.Scene();
+
+        // table
+
+        for (let i = 0; i < table.length; i += 1) {
+          const element = document.createElement("div");
+          element.className = "element";
+          ColorIdentifier(table[i].Float, element);
+          const header_container = document.createElement("div");
+          header_container.className = "header_container";
+          element.appendChild(header_container);
+
+          const country = document.createElement("div");
+          country.className = "country";
+          country.innerHTML = table[i].str[3];
+          header_container.appendChild(country);
+
+          const age = document.createElement("div");
+          age.className = "age";
+          age.innerHTML = table[i].str[2];
+          header_container.appendChild(age);
+
+          const img = document.createElement("img");
+          img.className = "image";
+          img.src = table[i].str[1];     
+          element.appendChild(img);
+
+          const details = document.createElement("div");
+          details.className = "details";
+          details.innerHTML = table[i].str[0] + "<br>" + table[i].str[4];
+          element.appendChild(details);
+
+          const objectCSS = new CSS3DObject(element);
+          objectCSS.position.x = Math.random() * 4000 - 2000;
+          objectCSS.position.y = Math.random() * 4000 - 2000;
+          objectCSS.position.z = Math.random() * 4000 - 2000;
+          scene.add(objectCSS);
+
+          objects.push(objectCSS);
+
+          //
+
+          const object = new THREE.Object3D();
+          const col = i % 20;
+          const row = Math.floor(i / 20);
+
+          object.position.x = col * 140 - 1330;
+          object.position.y = -(row * 180) + 990;
+          targets.table.push(object);
+        }
+
+        // sphere
+
+        const vector = new THREE.Vector3();
+
+        for (let i = 0, l = objects.length; i < l; i++) {
+          const phi = Math.acos(-1 + (2 * i) / l);
+          const theta = Math.sqrt(l * Math.PI) * phi;
+
+          const object = new THREE.Object3D();
+
+          object.position.setFromSphericalCoords(800, phi, theta);
+
+          vector.copy(object.position).multiplyScalar(2);
+
+          object.lookAt(vector);
+
+          targets.sphere.push(object);
+        }
+
+        // helix 
+
+        for (let i = 0, l = objects.length; i < l; i++) {
+          const strand = i % 2;          
+          const step = Math.floor(i / 2); 
+
+
+          const theta = step * 0.18 + (strand * Math.PI);
+
+   
+          const y = -(step * 25) + 1250;
+
+          const object = new THREE.Object3D();
+
+  
+          object.position.setFromCylindricalCoords(600, theta, y);
+
+          vector.x = object.position.x * 2;
+          vector.y = object.position.y;
+          vector.z = object.position.z * 2;
+
+          object.lookAt(vector);
+
+          targets.helix.push(object);
+        }
+
+        // grid
+
+        for (let i = 0; i < objects.length; i++) {
+          const object = new THREE.Object3D();
+
+          object.position.x = (i % 5) * 400 - 800;
+          object.position.y = -(Math.floor(i / 5) % 4) * 400 + 600;
+          object.position.z = Math.floor(i / 20) * 1000 - 4500;
+
+          targets.grid.push(object);
+        }
+
+        //
+
+        renderer = new CSS3DRenderer();
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        document.getElementById("container").appendChild(renderer.domElement);
+
+        //
+
+        controls = new TrackballControls(camera, renderer.domElement);
+        controls.minDistance = 500;
+        controls.maxDistance = 6000;
+        controls.addEventListener("change", render);
+
+        const buttonTable = document.getElementById("table");
+        buttonTable.addEventListener("click", function () {
+          transform(targets.table, 2000);
+        });
+
+        const buttonSphere = document.getElementById("sphere");
+        buttonSphere.addEventListener("click", function () {
+          transform(targets.sphere, 2000);
+        });
+
+        const buttonHelix = document.getElementById("helix");
+        buttonHelix.addEventListener("click", function () {
+          transform(targets.helix, 2000);
+        });
+
+        const buttonGrid = document.getElementById("grid");
+        buttonGrid.addEventListener("click", function () {
+          transform(targets.grid, 2000);
+        });
+
+        transform(targets.table, 2000);
+
+        //
+
+        window.addEventListener("resize", onWindowResize);
+      }
+
+      function transform(targets, duration) {
+        TWEEN.removeAll();
+
+        for (let i = 0; i < objects.length; i++) {
+          const object = objects[i];
+          const target = targets[i];
+
+          new TWEEN.Tween(object.position)
+            .to(
+              {
+                x: target.position.x,
+                y: target.position.y,
+                z: target.position.z,
+              },
+              Math.random() * duration + duration,
+            )
+            .easing(TWEEN.Easing.Exponential.InOut)
+            .start();
+
+          new TWEEN.Tween(object.rotation)
+            .to(
+              {
+                x: target.rotation.x,
+                y: target.rotation.y,
+                z: target.rotation.z,
+              },
+              Math.random() * duration + duration,
+            )
+            .easing(TWEEN.Easing.Exponential.InOut)
+            .start();
+        }
+
+        new TWEEN.Tween(this)
+          .to({}, duration * 2)
+          .onUpdate(render)
+          .start();
+      }
+
+      function onWindowResize() {
+        camera.aspect = window.innerWidth / window.innerHeight;
+        camera.updateProjectionMatrix();
+
+        renderer.setSize(window.innerWidth, window.innerHeight);
+
+        render();
+      }
+
+      function animate() {
+        requestAnimationFrame(animate);
+
+        TWEEN.update();
+
+        controls.update();
+      }
+
+      function render() {
+        renderer.render(scene, camera);
+      }
+
+
+      // GOOGLE AUTHENTICATION SETUP
+
+      const GOOGLE_CLIENT_ID = "745679256544-n293ef4ffnhtusrj98sg6mhl4um11vst.apps.googleusercontent.com"; 
+
+      function setupGoogleAuth() {
+        if (window.google && window.google.accounts) {
+          google.accounts.id.initialize({
+            client_id: GOOGLE_CLIENT_ID,
+            callback: handleCredentialResponse,
+          });
+
+          google.accounts.id.renderButton(
+            document.getElementById("google-btn"),
+            {
+              theme: "outline",
+              size: "large",
+              shape: "pill",
+              text: "signin_with",
+              width: 280,
+            }
+          );
+        } else {
+          setTimeout(setupGoogleAuth, 100);
+        }
+      }
+
+      function handleCredentialResponse(response) {
+        try {
+          const payload = JSON.parse(atob(response.credential.split(".")[1]));
+          console.log("Successfully logged in as:", payload.name, `(${payload.email})`);
+        } catch (e) {
+          console.log("Logged in successfully!");
+        }
+
+        const overlay = document.getElementById("login-overlay");
+        overlay.style.transition = "opacity 0.6s ease";
+        overlay.style.opacity = "0";
+        setTimeout(() => {
+          overlay.style.display = "none";
+        }, 600);
+      }
+
+      setupGoogleAuth();
+    </script>
+
+  
+  </body>
+</html>
